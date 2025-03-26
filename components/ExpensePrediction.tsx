@@ -1,84 +1,133 @@
-"use client";
+  "use client";
 
-import React, { useEffect, useState } from "react";
+  import React, { useState, useEffect } from "react";
 
-const API_NEXT_MONTH = "http://127.0.0.1:5000/next_month";
-const API_CATEGORY_EXPENSES = "http://127.0.0.1:5000/category_expenses";
-const COLORS = [
-  "#F86CE0",
-  "#E789FF",
-  "#E2A9ED",
-  "#D64ADE",
-  "#F86CE0",
-  "#D16BF4",
-];
+  interface Expense {
+    category: string;
+    amount: number;
+  }
 
-const ExpensePredictionCard = () => {
-  const [totalExpense, setTotalExpense] = useState(0);
-  const [month, setMonth] = useState("Loading...");
-  const [categoryExpenses, setCategoryExpenses] = useState<
-    { category: string; amount: number; color: string }[]
-  >([]);
+  const ExpensePredictionCard = () => {
+    const [expenses, setExpenses] = useState<Expense[]>([]);
+    const [totalExpense, setTotalExpense] = useState(0);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function fetchExpenseData() {
-      try {
-        const [nextMonthRes, categoryRes] = await Promise.all([
-          fetch(API_NEXT_MONTH),
-          fetch(API_CATEGORY_EXPENSES),
-        ]);
+    useEffect(() => {
+      async function fetchExpensePredictions() {
+        try {
+          setIsLoading(true);
+          setError(null);
 
-        const nextMonthData = await nextMonthRes.json();
-        const categoryData = await categoryRes.json();
+          // Use environment variable for API base URL if possible
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000';
+          
+          // Fetch category expenses for the current month
+          const response = await fetch(`${apiUrl}/category_expenses`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          });
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+          }
+          
+          const data = await response.json();
+          
+          // Transform category breakdown into expense array
+          const fetchedExpenses = Object.entries(data.category_breakdown || {}).map(([category, amount]) => ({
+            category,
+            amount: Number(amount)
+          }));
 
-        if (nextMonthData) setTotalExpense(nextMonthData);
-        if (categoryData.category_breakdown) {
-          setCategoryExpenses(
-            Object.entries(categoryData.category_breakdown)
-              .filter(([_, amount]) => typeof amount === "number" && amount > 0)
-              .map(([category, amount], index) => ({
-                category,
-                amount: parseFloat(amount.toFixed(2)),
-                color: COLORS[index % COLORS.length],
-              }))
-          );
-          setMonth(categoryData.month);
+          setExpenses(fetchedExpenses);
+          setTotalExpense(data.total_spending || 0);
+        } catch (error) {
+          console.error("Detailed Error fetching expense predictions:", error);
+          setError(error instanceof Error ? error.message : "An unknown error occurred");
+          
+          // Fallback to default expenses if fetch fails
+          setExpenses([
+            { category: "Transportation", amount: 1100 },
+            { category: "Food", amount: 800 },
+            { category: "Utilities", amount: 600 },
+            { category: "Entertainment", amount: 400 },
+            { category: "Miscellaneous", amount: 300 },
+          ]);
+          setTotalExpense(3200);
+        } finally {
+          setIsLoading(false);
         }
-      } catch (error) {
-        console.error("Error fetching expense data:", error);
       }
-    }
-    fetchExpenseData();
-  }, []);
 
-  return (
-    <div className="w-[400px] bg-[#1E1E1E] rounded-2xl p-6 shadow-lg text-[#B9B9B9]">
-      <div className="flex justify-between items-center">
-        <h2 className="text-lg font-semibold">Expense Prediction</h2>
-        <p className="text-lg font-semibold">{month}</p>
-      </div>
-      <p className="text-sm mt-2">
-        Based on your past month, here are your projected expenses for next
-        month
-      </p>
-      <h3 className="text-lg font-semibold mt-4">Total Expense</h3>
-      <p className="text-3xl font-bold">${totalExpense.toFixed(2)}</p>
+      fetchExpensePredictions();
+    }, []);
 
-      <div className="grid grid-cols-2 gap-2 mt-4">
-        {categoryExpenses.map((expense, index) => (
-          <div key={index} className="flex items-center space-x-2">
-            <span
-              className="w-2.5 h-2.5 rounded-full"
-              style={{ backgroundColor: expense.color }}
-            ></span>
-            <p className="text-sm">
-              {expense.category} - ${expense.amount}
-            </p>
+    if (isLoading) {
+      return (
+        <div className="w-[400px] bg-[#1E1E1E] rounded-2xl p-6 shadow-lg text-[#B9B9B9]">
+          <div className="animate-pulse">
+            <div className="h-6 bg-gray-700 rounded w-3/4 mb-4"></div>
+            <div className="h-4 bg-gray-700 rounded w-1/2 mb-2"></div>
+            <div className="h-12 bg-gray-700 rounded w-full my-4"></div>
+            <div className="grid grid-cols-2 gap-2">
+              {[...Array(6)].map((_, index) => (
+                <div key={index} className="flex items-center space-x-2">
+                  <div className="w-2.5 h-2.5 bg-gray-700 rounded-full"></div>
+                  <div className="h-4 bg-gray-700 rounded w-3/4"></div>
+                </div>
+              ))}
+            </div>
           </div>
-        ))}
-      </div>
-    </div>
-  );
-};
+        </div>
+      );
+    }
 
-export default ExpensePredictionCard;
+    if (error) {
+      return (
+        <div className="w-[400px] bg-[#1E1E1E] rounded-2xl p-6 text-red-500">
+          <p>Error loading expense predictions:</p>
+          <p>{error}</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="w-[400px] bg-[#1E1E1E] rounded-2xl p-6 shadow-lg text-[#B9B9B9]">
+        <div className="flex justify-between items-center">
+          <h2 className="text-lg font-semibold">Expense prediction</h2>
+          <p className="text-lg font-semibold">
+            {new Date().toLocaleString('default', { month: 'long' })}
+          </p>
+        </div>
+        <p className="text-sm mt-2">
+          Based on your past month, here are your projected expenses
+        </p>
+        <h3 className="text-lg font-semibold mt-4">Total Expense</h3>
+        <p className="text-3xl font-bold">${totalExpense.toLocaleString()}</p>
+
+        <div className="grid grid-cols-2 gap-2 mt-4">
+          {expenses.map((expense, index) => (
+            <div key={index} className="flex items-center space-x-2">
+              <span 
+                className="w-2.5 h-2.5 rounded-full"
+                style={{
+                  backgroundColor: [
+                    "#6B46C1", "#9F7AEA", "#805AD5", "#B794F4", "#D6BCFF"
+                  ][index % 5]
+                }}
+              ></span>
+              <p className="text-sm">
+                {expense.category} - ${expense.amount.toLocaleString()}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  export default ExpensePredictionCard;

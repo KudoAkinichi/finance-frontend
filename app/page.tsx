@@ -1,8 +1,11 @@
+"use client";
+import React, { useState } from "react"; // ✅ Add useState import
 import ExpenseChart from "@/components/ExpenseChart";
 import ExpensePrediction from "@/components/ExpensePrediction";
 import Balance from "@/components/Balance";
 import Spending from "@/components/Spending";
 import RecentTransactions from "@/components/RecentTransaction";
+import { Types } from "@/components/Types";
 
 export default function Home() {
   return (
@@ -32,12 +35,11 @@ export default function Home() {
           <div className="flex-1">
             <Balance />
           </div>
-          <div className="flex-1">
-            <Spending />
-          </div>
+          <Types />
           <div className="flex-1">
             <RecentTransactions />
           </div>
+          
         </div>
       </div>
     </div>

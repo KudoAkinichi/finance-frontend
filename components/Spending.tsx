@@ -1,46 +1,29 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 
-const SpendingCard = () => {
+const API_ADD_EXPENSE = "http://127.0.0.1:5000/add-expense";
+
+const SpendingCard = ({ onExpenseAdded }) => {
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [clicked, setClicked] = useState(false);
-  const [currentDateTime, setCurrentDateTime] = useState("");
   const [amount, setAmount] = useState("");
   const [showAmountInput, setShowAmountInput] = useState(false);
-
-  useEffect(() => {
-    const updateDateTime = () => {
-      const now = new Date();
-      const formattedDateTime = now.toLocaleString("en-US", {
-        weekday: "short",
-        month: "short",
-        day: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: true,
-      });
-      setCurrentDateTime(formattedDateTime);
-    };
-    updateDateTime();
-    const interval = setInterval(updateDateTime, 1000);
-    return () => clearInterval(interval);
-  }, []);
+  const [loading, setLoading] = useState(false);
 
   const categories = [
-    "Food",
-    "Entertainment",
-    "Cultural..",
-    "Shopping",
-    "Gifts",
-    "Clothing",
-    "Family",
-    "Unknown",
-    "Health",
-    "Transport",
+    "Food", "Entertainment", "Cultural", "Shopping", "Gifts",
+    "Clothing", "Family", "Unknown", "Health", "Transport",
   ];
+
+  const formatDate = () => {
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    const year = now.getFullYear();
+    const hours = String(now.getHours()).padStart(2, "0");
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+    return `${month}/${day}/${year} ${hours}:${minutes}`;
+  };
 
   const handleCategorySelect = (category) => {
     setSelectedCategory(category);
@@ -48,10 +31,39 @@ const SpendingCard = () => {
     setAmount("");
   };
 
-  const handleClick = () => {
-    if (selectedCategory && amount) {
-      setClicked(true);
-      setTimeout(() => setClicked(false), 200);
+  const handleSubmit = async () => {
+    if (!selectedCategory || !amount) return;
+
+    const newExpense = {
+      Date: formatDate(),
+      Category: selectedCategory,
+      Amount: parseFloat(amount),
+      "Income/Expense": "Expense",
+      Note: selectedCategory // Adding a note for better transaction tracking
+    };
+
+    setLoading(true);
+
+    try {
+      const response = await fetch(API_ADD_EXPENSE, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newExpense),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to add expense");
+
+      if (onExpenseAdded) onExpenseAdded(newExpense);
+    } catch (error) {
+      console.error("Error adding expense:", error);
+    } finally {
+      setLoading(false);
+      setSelectedCategory(null);
+      setAmount("");
+      setShowAmountInput(false);
     }
   };
 
@@ -59,8 +71,7 @@ const SpendingCard = () => {
     <div className="w-80 bg-black rounded-2xl overflow-hidden shadow-lg">
       <div className="bg-cyan-500 text-white text-center py-4 relative">
         <h2 className="text-lg font-semibold">Spending</h2>
-        <p className="text-2xl font-bold">{amount ? `-${amount} INR` : ""}</p>
-        <p className="text-sm mt-1">{currentDateTime}</p>
+        <p className="text-2xl font-bold">{amount ? `-$${amount}` : ""}</p>
       </div>
       <div className="bg-black p-4 text-white grid grid-cols-4 gap-3">
         {categories.map((category, index) => (
@@ -95,14 +106,12 @@ const SpendingCard = () => {
       )}
       <button
         className={`w-full py-2 transition transform ${
-          selectedCategory && amount
-            ? "bg-gray-700 active:scale-95"
-            : "bg-gray-500 opacity-50 cursor-not-allowed"
-        } text-white ${clicked ? "scale-95" : "scale-100"}`}
-        disabled={!selectedCategory || !amount}
-        onClick={handleClick}
+          selectedCategory && amount ? "bg-gray-700 active:scale-95" : "bg-gray-500 opacity-50 cursor-not-allowed"
+        } text-white`}
+        disabled={!selectedCategory || !amount || loading}
+        onClick={handleSubmit}
       >
-        Done
+        {loading ? "Adding..." : "Done"}
       </button>
     </div>
   );

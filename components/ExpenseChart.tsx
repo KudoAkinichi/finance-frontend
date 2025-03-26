@@ -36,7 +36,7 @@ export default function MyChart() {
 
         const formattedData = data.map(
           (entry: { Month: string; expenses: number }) => ({
-            month: entry.Month, // Expected format: "July 2021"
+            month: entry.Month,
             expenses: entry.expenses,
           })
         );
@@ -49,7 +49,6 @@ export default function MyChart() {
     fetchData();
   }, []);
 
-  // 🔹 Custom Tooltip Component
   const CustomTooltip: React.FC<TooltipProps<number, string>> = ({
     active,
     payload,
@@ -72,23 +71,17 @@ export default function MyChart() {
         <LineChart
           data={chartData}
           margin={{ left: 12, right: 12 }}
-          width={800} // Increased width
+          width={800}
         >
           <CartesianGrid vertical={false} horizontal={false} />
-
-          {/* Hide X-Axis labels */}
           <XAxis dataKey="month" tick={false} axisLine={false} />
-
-          {/* 🔹 Custom Tooltip Fix */}
           <Tooltip content={<CustomTooltip />} />
-
-          {/* Removed ChartLegend */}
           <Line
             dataKey="expenses"
             type="linear"
             stroke="blue"
             strokeWidth={2}
-            dot={{ r: 5, fill: "blue" }} // Keeps dots at points
+            dot={{ r: 5, fill: "blue" }}
           />
         </LineChart>
       </ChartContainer>
