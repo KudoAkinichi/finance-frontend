@@ -50,8 +50,8 @@ const RecentTransactions = () => {
 
       {/* Spending Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center">
-          <div className="relative">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center">
+          <div className="relative bg-[#1E1E1E] p-4 rounded-2xl shadow-lg">
             <SpendingCard />
             <button
               className="absolute -top-10 right-2 bg-black text-white px-3 py-1 rounded-full"
